@@ -27,7 +27,7 @@ args = {
     "no_cuda": False,
     "bert_model": 'bert-base-uncased',
     "output_dir": CLAS_DATA_PATH / 'output',
-    "max_seq_length": 500,
+    "max_seq_length": 50,
     "do_train": True,
     "do_eval": True,
     "do_lower_case": True,

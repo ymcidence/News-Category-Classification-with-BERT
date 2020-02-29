@@ -102,13 +102,12 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
     return features
 
 
-def convert_single(single_text, max_seq_length=None, tokenizer=None):
+def convert_single(single_text, max_seq_length=None, tokenizer=None) -> InputFeatures:
     if tokenizer is None:
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=args['do_lower_case'])
     if max_seq_length is None:
         max_seq_length = args['max_seq_length']
 
-    features = []
     tokens_a = tokenizer.tokenize(single_text)
 
     if len(tokens_a) > max_seq_length - 2:
@@ -139,9 +138,7 @@ def convert_single(single_text, max_seq_length=None, tokenizer=None):
     logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     logger.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
 
-    features.append(
-        InputFeatures(input_ids=input_ids,
-                      input_mask=input_mask,
-                      segment_ids=segment_ids,
-                      label_ids=0))
-    return features
+    return InputFeatures(input_ids=input_ids,
+                         input_mask=input_mask,
+                         segment_ids=segment_ids,
+                         label_ids=0)
