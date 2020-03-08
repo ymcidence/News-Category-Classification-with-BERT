@@ -1,7 +1,7 @@
 from util.logging import logger
 import pandas as pd
 import os
-
+from util.meta import side_list
 
 class InputExample(object):
     """A single training/test example for simple sequence classification."""
@@ -103,7 +103,7 @@ class LabelTextProcessor(DataProcessor):
         examples = []
         for (i, row) in enumerate(df.values):
             guid = row[0]
-            text_a = row[2]
+            text_a = row[4]
             if labels_available:
                 labels = row[2]
                 # print('hiiiii',labels)
@@ -114,6 +114,61 @@ class LabelTextProcessor(DataProcessor):
                 InputExample(guid=guid, text_a=text_a, labels=labels))
         return examples
 
+class PartisanTextProcessor(DataProcessor):
+
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
+        self.labels = None
+        self.labels = side_list
+
+    def get_train_examples(self, data_dir, size=-1):
+        filename = 'train.csv'
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, filename)))
+        if size == -1:
+            data_df = pd.read_csv(os.path.join(data_dir, filename), engine='python')
+            return self._create_examples(data_df, "train")
+        else:
+            data_df = pd.read_csv(os.path.join(data_dir, filename), engine='python')
+            return self._create_examples(data_df.sample(size), "train")
+
+    def get_dev_examples(self, data_dir, size=-1):
+        """See base class."""
+        filename = 'val.csv'
+        if size == -1:
+            data_df = pd.read_csv(os.path.join(data_dir, filename), engine='python')
+            return self._create_examples(data_df, "dev")
+        else:
+            data_df = pd.read_csv(os.path.join(data_dir, filename), engine='python')
+            return self._create_examples(data_df.sample(size), "dev")
+
+    def get_test_examples(self, data_dir, data_file_name, size=-1):
+        data_df = pd.read_csv(os.path.join(data_dir, data_file_name))
+        if size == -1:
+            return self._create_examples(data_df, "test")
+        else:
+            return self._create_examples(data_df.sample(size), "test")
+
+    def get_labels(self):
+        """See base class."""
+        if self.labels == None:
+            self.labels = side_list
+        return self.labels
+
+    def _create_examples(self, df, set_type, labels_available=True):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, row) in enumerate(df.values):
+            guid = i
+            text_a = row[3]
+            if labels_available:
+                labels = row[2]
+                # print('hiiiii',labels)
+            else:
+                labels = []
+                print("No Label Found")
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, labels=labels))
+        return examples
 
 def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer):
     """Loads a data file into a list of `InputBatch`s."""

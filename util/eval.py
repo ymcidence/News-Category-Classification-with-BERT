@@ -2,13 +2,12 @@ import numpy as np
 import torch
 import os
 from torch import Tensor
-from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
+# from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification
 
 from util.logging import args, logger
-from util.data_processing import convert_examples_to_features, convert_single
+from util.data_processing import convert_single
 from util.data_structure import LabelTextProcessor
-from util.meta import label_list
 
 
 def accuracy(out, labels):
@@ -37,32 +36,12 @@ def fbeta(y_pred: Tensor, y_true: Tensor, thresh: float = 0.2, beta: float = 2, 
     return res.mean().item()
 
 
-def set_eval(model, tokenizer=None):
-    processors = {
-        "news_cat_label": LabelTextProcessor
-    }
-    processor = processors['news_cat_label'](args['data_dir'])
-    eval_examples = processor.get_dev_examples(args['data_dir'], size=args['val_size'])
-    args['output_dir'].mkdir(exist_ok=True)
-
-    eval_features = convert_examples_to_features(
-        eval_examples, label_list, args['max_seq_length'], tokenizer)
-    logger.info("***** Running evaluation *****")
-    logger.info("  Num examples = %d", len(eval_examples))
-    logger.info("  Batch size = %d", args['eval_batch_size'])
-    all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
-    all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
-    all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
-    all_label_ids = torch.tensor([f.label_ids for f in eval_features], dtype=torch.long)
-    eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-    # Run prediction for full data
-    eval_sampler = SequentialSampler(eval_data)
-    eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args['eval_batch_size'])
-
+def set_eval(model, eval_dataloader):
     model.eval()
     eval_loss, eval_accuracy = 0, 0
     nb_eval_steps, nb_eval_examples = 0, 0
     device = torch.device("cuda" if torch.cuda.is_available() and not args["no_cuda"] else "cpu")
+    count = 0
     for input_ids, input_mask, segment_ids, label_ids in eval_dataloader:
         input_ids = input_ids.to(device)
         input_mask = input_mask.to(device)
@@ -82,6 +61,10 @@ def set_eval(model, tokenizer=None):
 
         nb_eval_examples += input_ids.size(0)
         nb_eval_steps += 1
+
+        count += 1
+        if count >= 4:
+            break
 
     eval_loss = eval_loss / nb_eval_steps
     eval_accuracy = eval_accuracy / nb_eval_examples
